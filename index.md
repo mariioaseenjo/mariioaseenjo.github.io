@@ -10,6 +10,8 @@ En este blog, nos enfocamos en proporcionar información valiosa y actualizada s
 
 ## [Writeups de HackTheBox](/HackTheBox/Writeups/index.md)
 
+Aquí encontrarás writeups hechos por mí de las máquinas que llevo acabo en la plataforma HackTheBox.
+
 ### [Herramientas Esenciales para Pentesters](#)
 
 Descubre una selección de las herramientas más populares utilizadas por los pentesters y cómo pueden ayudarte en tus pruebas de penetración.
