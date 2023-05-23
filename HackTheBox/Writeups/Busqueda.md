@@ -13,7 +13,7 @@ Breve resumen de la máquina, incluyendo su objetivo y una descripción general 
 
 ## Descubrimiento y Enumeración
 
-# `PING`
+### `PING`
 
 ```
 
@@ -28,7 +28,7 @@ rtt min/avg/max/mdev = 92.834/92.834/92.834/0.000 ms
 
 ```
 
-# `NMAP`
+### `NMAP`
 
 ```
 
