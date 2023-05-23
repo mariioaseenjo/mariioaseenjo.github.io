@@ -13,9 +13,28 @@ Breve resumen de la máquina, incluyendo su objetivo y una descripción general 
 
 ## Descubrimiento y Enumeración
 
-`nmap`
+# `PING`
+
 ```
 
+root@kali:~/Desktop/HTB/Machines/Busqueda# ping -c 1 10.10.11.208
+PING 10.10.11.208 (10.10.11.208) 56(84) bytes of data.
+64 bytes from 10.10.11.208: icmp_seq=1 ttl=63 time=92.8 ms
+
+--- 10.10.11.208 ping statistics ---
+1 packets transmitted, 1 received, 0% packet loss, time 0ms
+rtt min/avg/max/mdev = 92.834/92.834/92.834/0.000 ms
+
+
+```
+
+# `NMAP`
+
+```
+
+
+
+```
 
 Descripción de las técnicas de descubrimiento y enumeración utilizadas, incluyendo los puertos abiertos, servicios encontrados y cualquier otra información relevante obtenida durante esta fase.
 
