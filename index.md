@@ -8,7 +8,7 @@ En este blog, nos enfocamos en proporcionar información valiosa y actualizada s
 
 ## Contenido Destacado
 
-## [Writeups de HackTheBox](/HackTheBox/Writeups/index.md)
+### [Writeups de HackTheBox](/HackTheBox/Writeups/index.md)
 
 Aquí encontrarás writeups hechos por mí de las máquinas que llevo acabo en la plataforma HackTheBox.
 
